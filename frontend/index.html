@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Merchant Support Chat</title>
+  <style>
+
+    /* This styles the whole page background */
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+
+    /* This is the white box that contains everything */
+    .chat-box {
+      background: white;
+      width: 500px;
+      margin: auto;
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    /* This is the title at the top */
+    h2 {
+      color: #1a56db;
+      margin-bottom: 16px;
+    }
+
+    /* This is the area where messages appear */
+    #messages {
+      height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #fafafa;
+    }
+
+    /* Every single message bubble */
+    .message {
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      max-width: 80%;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* User message — right side, blue */
+    .user {
+      background: #1a56db;
+      color: white;
+      margin-left: auto;
+      text-align: right;
+    }
+
+    /* Bot message — left side, gray */
+    .bot {
+      background: #e8e8e8;
+      color: #111;
+    }
+
+    /* The row that holds input box and button */
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* The text input box */
+    #userInput {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    /* The send button */
+    #sendBtn {
+      padding: 10px 20px;
+      background: #1a56db;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <!-- THE CHAT BOX — the white container -->
+  <div class="chat-box">
+
+    <!-- Title -->
+    <h2>Merchant Support Agent</h2>
+
+    <!-- 
+      This div shows all messages.
+      When user sends a message, we ADD a new div inside here.
+      When bot replies, we ADD another div inside here.
+    -->
+    <div id="messages">
+
+      <!-- This is the first welcome message from bot -->
+      <div class="message bot">
+        Hi! Ask me anything about payments or APIs.
+      </div>
+
+    </div>
+
+    <!-- 
+      This row has two things:
+      1. An input box where user types
+      2. A Send button
+    -->
+    <div class="input-row">
+      <input 
+        id="userInput" 
+        type="text" 
+        placeholder="Type your question here..." 
+      />
+      <button id="sendBtn" onclick="sendMessage()">
+        Send
+      </button>
+    </div>
+
+  </div>
+
+
+  <script>
+
+    /*
+      STEP 1 — Get the HTML elements we need to work with
+      We grab them by their id so JavaScript can use them
+    */
+    const messagesDiv = document.getElementById('messages');
+    const input = document.getElementById('userInput');
+    const btn = document.getElementById('sendBtn');
+
+
+    /*
+      STEP 2 — Allow pressing Enter key to send message
+      Instead of clicking the button, user can press Enter
+    */
+    input.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+
+    /*
+      STEP 3 — The main sendMessage function
+      This runs every time user clicks Send or presses Enter
+    */
+    async function sendMessage() {
+
+      /*
+        Get the text the user typed
+        .trim() removes any extra spaces
+      */
+      const text = input.value.trim();
+
+      /*
+        If the input is empty, do nothing and stop here
+      */
+      if (text === '') return;
+
+
+      /*
+        Show the user's message on the right side (blue bubble)
+        We call addMessage() which creates a new div
+      */
+      addMessage(text, 'user');
+
+
+      /*
+        Clear the input box so user can type again
+      */
+      input.value = '';
+
+
+      /*
+        Disable the button so user cannot send twice
+        while waiting for AI reply
+      */
+      btn.disabled = true;
+      btn.textContent = 'Thinking...';
+
+
+      /*
+        Show a temporary "thinking" message
+        We will replace this with the real answer
+      */
+      const thinkingBubble = addMessage('Thinking...', 'bot');
+
+
+      /*
+        STEP 4 — Send the message to your backend server
+        
+        fetch() is how JavaScript talks to a server
+        We send a POST request to http://localhost:4000/api/chat
+        
+        We send this as JSON:
+        { "message": "whatever the user typed" }
+        
+
+        https://jaywalker-snack-masses.ngrok-free.dev/api/chat
+
+        The server receives it, sends it to Groq AI,
+        gets the answer, and sends it back to us
+      */
+      try {
+
+        const response = await fetch('http://localhost:4000/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ message: text })
+        });
+
+        /*
+          Convert the server's response to JSON
+          so we can read the answer property
+        */
+        const data = await response.json();
+
+        /*
+          Replace the "Thinking..." bubble
+          with the real answer from AI
+        */
+        thinkingBubble.textContent = data.answer;
+
+      } catch (error) {
+
+        /*
+          If something goes wrong (server not running etc)
+          show this error message instead
+        */
+        thinkingBubble.textContent = 
+          'Error — make sure your server is running!';
+
+      }
+
+
+      /*
+        Re-enable the Send button
+        and put back the original text
+      */
+      btn.disabled = false;
+      btn.textContent = 'Send';
+
+      /*
+        Put the cursor back in the input box
+        so user can type next question immediately
+      */
+      input.focus();
+
+    }
+
+
+    /*
+      STEP 5 — addMessage function
+      
+      This creates a new message bubble on screen.
+      
+      text = the message to show
+      sender = 'user' or 'bot'
+      
+      If sender is 'user' — bubble goes right side, blue
+      If sender is 'bot'  — bubble goes left side, gray
+    */
+    function addMessage(text, sender) {
+
+      /* Create a new empty div */
+      const div = document.createElement('div');
+
+      /* 
+        Give it the class 'message' 
+        plus either 'user' or 'bot'
+        This applies the CSS styles we wrote above
+      */
+      div.className = 'message ' + sender;
+
+      /* Put the text inside the div */
+      div.textContent = text;
+
+      /* Add this div into the messages area */
+      messagesDiv.appendChild(div);
+
+      /* 
+        Scroll to the bottom so the 
+        latest message is always visible 
+      */
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+      /* 
+        Return the div so we can update it later
+        (we use this to replace "Thinking..." with real answer)
+      */
+      return div;
+
+    }
+
+  </script>
+
+</body>
+</html>
