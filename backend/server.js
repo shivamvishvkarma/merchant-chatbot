@@ -61,8 +61,7 @@ Keep answers short and easy to understand.`;
       
       This is like doing INSERT INTO in SQL
       but for MongoDB it is Chat.create()
-    */
-   await Chat.create({
+    */  await Chat.create({
     merchantId: merchantId,
     userMessage: userMessage,
     botReply: answer,
@@ -106,8 +105,6 @@ app.get('/api/history', async(req, res) =>{
 app.listen(process.env.PORT || port, ()=> {
     console.log(`Server is running at ${port}`);
 });
-
-
 
 
 
